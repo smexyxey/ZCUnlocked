@@ -1,0 +1,8 @@
+*.dll
+*.dll.bak
+*.lib
+*.exp
+*.obj
+obj_/
+compile.out
+*.log
