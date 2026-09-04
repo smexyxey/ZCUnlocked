@@ -47,6 +47,54 @@ Requires the MSVC Build Tools (the script pulls in `vcvars64.bat`). Produces
 `main.dll`. Drop it into `<game>\SWZeroCompany\Binaries\Win64\ue4ss\Mods\ZCUnlocked\dlls\main.dll`
 alongside an empty `enabled.txt` in the `ZCUnlocked` folder to turn the mod on.
 
+## Running on Linux (Steam Proton)
+
+There's no Linux build to make - this is a Windows `main.dll` and UE4SS loads it
+inside the game process. Under Proton the game and UE4SS are already running as
+Windows code in a Wine prefix, so the same `main.dll` loads there natively. The
+only Linux-specific part is getting UE4SS itself to inject.
+
+1. **Game + UE4SS first.** Install Zero Company, force a Proton version under the
+   game's Properties -> Compatibility, and launch once so the prefix is built.
+   Then install [UE4SS](https://www.nexusmods.com/starwarszerocompany/mods/9)
+   with its normal Windows steps - same files, same relative paths.
+2. **Let the UE4SS loader load.** UE4SS ships as a proxy DLL (often `dwmapi.dll`,
+   sometimes `xinput1_3.dll` / `d3d11.dll` / `dinput8.dll` - check which one
+   yours uses). Wine won't prefer a dropped-in DLL unless told to, so add a DLL
+   override in the game's Steam launch options, swapping in your proxy's name:
+
+   ```
+   WINEDLLOVERRIDES="dwmapi=n,b" %command%
+   ```
+
+   (`protontricks <appid>` can set the same override instead.)
+3. **Drop the mod in** at the same relative path as on Windows - forward slashes,
+   same structure:
+
+   ```
+   <game>/SWZeroCompany/Binaries/Win64/ue4ss/Mods/ZCUnlocked/dlls/main.dll
+   ```
+
+   plus an empty `enabled.txt` in the `ZCUnlocked` folder. The game usually lives
+   under `~/.steam/steam/steamapps/common/SWZeroCompany/` (or another library or
+   SD-card path on a Steam Deck).
+4. **Get a Windows `main.dll`.** `compile.bat` is MSVC-only, so build on Windows,
+   reuse a prebuilt `main.dll`, or cross-compile on Linux with MinGW-w64:
+
+   ```
+   x86_64-w64-mingw32-g++ -shared -std=c++20 -O2 -static -o main.dll dllmain.cpp
+   ```
+
+   Expect to iron out a few MSVC-isms (some `<intrin.h>` intrinsics, RTTI-off) if
+   MinGW complains; `clang-cl` targeting `x86_64-pc-windows-msvc` is the closest
+   match to `compile.bat`.
+5. **Check it took.** Launch through Steam and read the one-line note at
+   `.../ue4ss/Mods/ZCUnlocked/dlls/ZCUnlocked.log`.
+
+The same build pin applies (24874058), and if nothing shows up in-game it's
+almost always UE4SS injection under Proton, not the mod - back up your save
+either way.
+
 ## Finding it in-game
 
 - Armor sits in the normal outfit screen for human characters and colors like
